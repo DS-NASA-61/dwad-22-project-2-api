@@ -1,0 +1,17 @@
+[
+	{
+		"cell_group_id": "001",
+        "cell_group_name":"Love Multiply",
+        "user":["0001","0002"]
+	},
+	{
+		"cell_group_id": "002",
+		"cell_group_name":"CrossWay",
+        "user":["0002","0001"]
+	},
+	{
+		"cell_group_id": "003",
+		"cell_group_name":"Cornerstone",
+        "user":["0001","0003"]
+	}
+]

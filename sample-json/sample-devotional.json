@@ -1,0 +1,29 @@
+[
+	{
+		"devotional_id": "01",
+        "user": {
+            "user_id": "0002",
+            "username": "claire_ma",
+            "email": "claire_ma@gmail.com"
+            },
+        "devotional":""
+	},
+    {
+		"devotional_id": "02",
+        "user": {
+            "user_id": "0001",
+            "username": "doris_ma",
+		    "user_email": "lullabydoris@gmail.com"
+            },
+        "devotional":""
+	},
+    {
+		"devotional_id": "03",
+        "user": {
+            "user_id": "0003",
+            "username": "stefen_wang",
+		    "user_email": "stefen_wang@gmail.com"
+            },
+        "devotional":""
+	}
+]
