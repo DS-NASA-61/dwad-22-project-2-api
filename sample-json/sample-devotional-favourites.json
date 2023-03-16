@@ -1,0 +1,17 @@
+[
+	{
+		"_id": "221",
+		"user_email": "claire_ma@gmail.com",
+		"devotional": ["01", "02"]
+	},
+	{
+		"_id": "222",
+		"user_email": "lullabydoris@gmail.com",
+		"devotional": ["03"]
+	},
+	{
+		"_id": "223",
+		"user_email": "stefen_wang@gmail.com",
+		"devotional": ["01", "05"]
+	}
+]
