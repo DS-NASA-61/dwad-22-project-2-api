@@ -16,8 +16,7 @@ app.use(cors());
 app.use(express.json());
 
 const mongoUri = process.env.MONGO_URI;
-const PORT = process.env.PORT || 3000;
-
+const PORT = 4000;
 //MongoClient is async
 async function main() {
   // connect to MongoDB, using two params the connection string and a configuration object
@@ -29,6 +28,7 @@ async function main() {
 
   //Create: adding new prayer request, data will be in req.body
   app.post("/prayer_request", async function (req, res) {
+    console.log("prayer request route called");
     if (!req.body.title) {
       res.status(400);
       res.send({ error: "Please give a short summary." });
@@ -57,6 +57,7 @@ async function main() {
           username: req.body.user.username,
           user_email: req.body.user.user_email,
         },
+        title: req.body.title,
       });
       res.json({ result: result }); //send back the result so client knows if it is successful
     } catch (e) {
@@ -68,8 +69,9 @@ async function main() {
     }
   });
 
-  //Read: retrive all existing prayer request, aka search, data will be in req.query
+  //Read: GET Endpoint to retrive all existing prayer request, data will be in req.query
   app.get("/prayer_request", async function (req, res) {
+    console.log("prayer request get route called");
     //the query string is the parameter passed to the end point, it's not part of the end point URL
     //three ways for and end points to receive info:
     //  1. req.body(send via .POST .PATCH .PUT, or when submit form, );
@@ -84,10 +86,9 @@ async function main() {
     const filter = {};
 
     // check if req.query.prayer_topic is truthy, aka got value? if yes proceed with what inside {}, if not skip the if
-    //  and if all the ifs are falsey,the will filter will be {}, means find all aka fine({})
+    //  and if all the ifs are falsey,the will filter will be {}, means find all aka find({})
     if (req.query.title) {
       filter.title = {
-        //need to modify it later!!!
         $regex: req.query.title,
         $options: "i", //making it case insensetive
       };
@@ -107,8 +108,16 @@ async function main() {
       .collection("prayerRequest")
       .find(filter)
       .toArray();
+    console.log(requests);
     res.json({ requests: requests });
   });
+
+  // GET Endpoint to retrieve a single prayer request by id : to be added
+
+  // GET Endpoint to get all prayer request from a user by user_email
+
+  // GET Endpoint to retrive all existing prayer request
+  // app.get("/prayer_request/:prayer_topic", async function (req, res) {});
 
   //Update: modify a document, data will be in req.body
   //need to know which prayer_request I'm changing, so will need _id in the parameter using ":"
@@ -132,6 +141,7 @@ async function main() {
             username: req.body.user.username,
             user_email: req.body.user.user_email,
           },
+          title: req.body.title,
         },
       }
     );
