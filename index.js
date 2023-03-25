@@ -63,8 +63,8 @@ async function main() {
   // --- Routes ---
 
   // --- Routes: Users ---
-  // POST Endpoint to create new users,
-  app.post("/users", async function (req, res) {
+  // POST Endpoint to create aka register new users,
+  app.post("/register", async function (req, res) {
     // Regex for email validation
     const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
 
@@ -84,10 +84,26 @@ async function main() {
         });
       }
 
+      //checking if username already exist
+      const existingUserName = await db
+        .collection(dbCollections.user)
+        .findOne({ username: username });
+      if (existingUserName) {
+        return res.status(409).json({ message: "Username already exists" });
+      }
+
+      //checking if user email already exist
+      const existingUserEmail = await db
+        .collection(dbCollections.user)
+        .findOne({ user_email: user_email });
+      if (existingUserEmail) {
+        return res.status(409).json({ message: "User Email already exists" });
+      }
+
       // Connect to MongoDB and insert new user
       const result = await db
         .collection(dbCollections.user)
-        .insertOne({ username, user_email, password });
+        .insertOne({ username, user_email, password, cell_group_name });
       const user_id = result.insertedId; //result.insertedId property contains the _id value of the newly inserted document, so we can access it later to push into cellgroup
 
       //add user_id to cellgroup
@@ -107,10 +123,60 @@ async function main() {
     }
   });
 
+  // POST Endpoint: create a route for user login using,
+  app.post("/login", async function (req, res) {
+    try {
+      const { username, user_email, password } = req.body;
+      console.log(req.body);
+      const user = await db.collection("user").findOne(
+        {
+          username: username,
+          user_email: user_email,
+          password: password,
+        },
+        {
+          projection: {
+            password: 0,
+          },
+        }
+      );
+      console.log("user -> ", user);
+
+      if (user) {
+        // get cellgroup
+        const cellgroup = await db.collection(dbCollections.cellGroup).findOne(
+          {
+            _id: new ObjectId(user.cellgroup_id),
+          },
+          {
+            projection: {
+              cell_group_name: 1,
+            },
+          }
+        );
+        const response = {
+          ...user,
+          cellgroup_name: cellgroup.cell_group_name,
+        };
+        // res.status(200).send(`Welcome ${user.username}!`);
+        res.json(response);
+      } else {
+        res.status(401).send("Invalid username or user email");
+      }
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Server error" });
+    }
+  });
+
   // GET Endpoint to view all the users,
+  app.get("/users", async function (req, res) {});
+
+  // GET route to search for users by name and cell group name (needed?)
 
   // PUT Endpoint to edit the users,
-  // DELETE to remove user,
+
+  // DELETE to remove user (won't establish yet)
 
   // --- Routes: Prayer Requests ---
   app.get("/", function (req, res) {
@@ -126,15 +192,16 @@ async function main() {
     //  2. req.query(via query string ?...=...&),
     //  3. req.params(if it is encoded in the url itslef)
 
-    // basic pattern for making search engine in many languanges: start with and empty criteria that will find all...and using conditions (ifs)
-    // to allow client to customize the filter object base on what they send to the endpoint via the query string
+    // basic pattern for making search engine in many languanges:
+    // start by initialize and empty criteria (in this case: an empty object called filter) that will find all,
+    // then, using conditions (ifs) to allow client to customize the filter object base on what they send to the endpoint via the query string
     const filter = {};
 
-    // check if req.query.prayer_topic is truthy? if yes proceed with what inside {}, if not skip the if
-    //  and if all the ifs are falsey,the will filter will be {}, means find all aka find({})
+    // check if req.query.prayer_topic is truthy? if yes proceed with what's inside of {}, if not skip the if,
+    // if all the ifs are falsey,the will filter will be {}, means find all aka find({})
     if (req.query.title) {
       filter.title = {
-        $regex: req.query.title,
+        $regex: req.query.title, // $regex property to search for prayer requests that match the given pattern.
         $options: "i", //making it case insensetive
       };
     }
@@ -149,13 +216,23 @@ async function main() {
     }
 
     // to enable serach by date
-    // if (req.query.date) {
-    //   filter.date = {}
-    // }
+    if (req.query.date) {
+      filter.date = { $eq: req.query.date };
+    }
 
-    // to enable serach by useremail
-    // if (req.query.user.useremail) {
-    //   filter.user.useremai = {}
+    // to enable serach by user name, I choose not to use exact match $eq
+    if (req.query.username) {
+      filter.user.username = {
+        $regex: req.query.username,
+        $options: "i",
+      };
+    }
+
+    //change database to add in cellgroup Id in prayerqRequest.User
+
+    // if (req.query.cellgroupId) {
+    //   filter.cell_group_id= {$eq:req.query.cellgroupId}
+    //   }
     // }
 
     const requests = await db
@@ -166,14 +243,6 @@ async function main() {
     res.status(200);
     res.json({ status: "success", requests: requests });
   });
-
-  // GET Endpoint to retrieve a single prayer request by id
-  // app.get("/prayer_request/:prayerRequest_id", async function (req, res) {
-  //   try {
-  //   } catch (error) {
-  //     sendDatabaseError(res);
-  //   }
-  // });
 
   // POST Endpoint to create new prayer request, data will be in req.body
   app.post("/prayer_request", async function (req, res) {
@@ -406,6 +475,8 @@ async function main() {
       }
     }
   );
+
+  // Delete Endpoint to delete the response,
 
   // --- Routes: Cellgroups (for future development) ---
   // POST Endpoint to create new cellgroup,
