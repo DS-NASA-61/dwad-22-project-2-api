@@ -63,8 +63,8 @@ async function main() {
   // --- Routes ---
 
   // --- Routes: Users ---
-  // POST Endpoint to create aka register new users,
-  app.post("/register", async function (req, res) {
+  // POST Endpoint to create new users aka sign up,
+  app.post("/signup", async function (req, res) {
     // Regex for email validation
     const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
 
@@ -178,11 +178,12 @@ async function main() {
 
   // DELETE to remove user (won't establish yet)
 
-  // --- Routes: Prayer Requests ---
+  // --- Base Routes ---
   app.get("/", function (req, res) {
     res.send("This is the Wall of Prays API");
   });
 
+  // --- Routes: Prayer Requests ---
   //GET Endpoint to retrive all existing prayer request, data will be in req.query
   app.get("/prayer_request", async function (req, res) {
     console.log("prayer request get route called");
@@ -478,11 +479,24 @@ async function main() {
 
   // Delete Endpoint to delete the response,
 
-  // --- Routes: Cellgroups (for future development) ---
-  // POST Endpoint to create new cellgroup,
-  // GET Endpoint to view all the cellgroups,
-  // PUT Endpoint to edit the cellgroups,
-  // DELETE to remove cellgroup,
+  // --- Routes: Cellgroups ---
+  // POST Endpoint to create new cellgroup, (for future development)
+
+  // GET Endpoint to view all the cellgroups
+  app.get("/cellgroups", async function (req, res) {
+    const filter = {};
+
+    const requests = await db
+      .collection(dbCollections.cellGroup)
+      .find(filter)
+      .toArray();
+
+    res.status(200);
+    res.json({ status: "success", requests: requests });
+  });
+
+  // PUT Endpoint to edit the cellgroups,(for future development)
+  // DELETE to remove cellgroup,(for future development)
 }
 main();
 
