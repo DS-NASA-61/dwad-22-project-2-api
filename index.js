@@ -117,7 +117,7 @@ async function main() {
           { projection: { _id: 1 } }
         );
       const cellgroup_id = new ObjectId(cellgroup_id_object._id.toString());
-      console.log("uscell_group_id -> ", cellgroup_id);
+      console.log("usercell_group_id -> ", cellgroup_id);
 
       // Connect to MongoDB and insert new user
       const result = await db.collection(dbCollections.user).insertOne({
@@ -127,8 +127,13 @@ async function main() {
         cellgroup_id,
         cell_group_name,
       });
-      console.log("newuser -> ", result);
       const user_id = result.insertedId; //result.insertedId property contains the _id value of the newly inserted document, so we can access it later to push into cellgroup
+
+      //get the newly created user document
+      const newUser = await db
+        .collection(dbCollections.user)
+        .findOne({ _id: user_id }, { projection: { password: 0 } });
+      console.log("newuser -> ", newUser);
 
       //add user_id to cellgroup
       //cellgroup name is in user login form, so findOneAndUpdate will find the correct cellgroup and update
@@ -140,7 +145,9 @@ async function main() {
           { returnOriginal: false }
         );
 
-      res.json({ message: "User created successfully", response: result });
+      res.json({
+        response: newUser,
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Server error" });
