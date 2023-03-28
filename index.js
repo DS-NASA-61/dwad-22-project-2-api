@@ -65,24 +65,33 @@ async function main() {
   // --- Routes: Users ---
   // POST Endpoint to create new users aka sign up,
   app.post("/signup", async function (req, res) {
+    // Regex for username validation (between 5 to 15 chars, should only contain alphanumeric characters and/or underscores (_))
+    const usernameRegex = "^[A-Za-z]\\w{4,14}$";
+
     // Regex for email validation
-    const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
+    const emailRegex = "^S+@S+.S+$";
 
     // Regex for password validation (at least 8 characters with both letters and numbers)
-    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
+    const passwordRegex = "^(?=.*[A-Za-z])(?=.*d)[A-Za-zd]{8,}$";
 
     try {
       const { username, user_email, password, cell_group_name } = req.body; // using destructuring assignment to extract these properties from the req.body object
 
-      if (!emailRegex.test(user_email)) {
-        return res.status(400).json({ error: "Invalid email format" });
-      }
-      if (!passwordRegex.test(password)) {
-        return res.status(400).json({
-          error:
-            "Please input least 8 characters with both letters and numbers",
-        });
-      }
+      // if (!usernameRegex.match(username)) {
+      //   return res.status(400).json({
+      //     error:
+      //       "username must be between 5 to 15 chars, should only contain alphanumeric characters and/or underscores",
+      //   });
+      // }
+      // if (!emailRegex.match(user_email)) {
+      //   return res.status(400).json({ error: "Invalid email format" });
+      // }
+      // if (!passwordRegex.match(password)) {
+      //   return res.status(400).json({
+      //     error:
+      //       "Please input least 8 characters with both letters and numbers",
+      //   });
+      // }
 
       //checking if username already exist
       const existingUserName = await db
@@ -100,14 +109,29 @@ async function main() {
         return res.status(409).json({ message: "User Email already exists" });
       }
 
+      // find cell_group_id
+      const cellgroup_id_object = await db
+        .collection(dbCollections.cellGroup)
+        .findOne(
+          { cell_group_name: cell_group_name },
+          { projection: { _id: 1 } }
+        );
+      const cellgroup_id = new ObjectId(cellgroup_id_object._id.toString());
+      console.log("uscell_group_id -> ", cellgroup_id);
+
       // Connect to MongoDB and insert new user
-      const result = await db
-        .collection(dbCollections.user)
-        .insertOne({ username, user_email, password, cell_group_name });
+      const result = await db.collection(dbCollections.user).insertOne({
+        username,
+        user_email,
+        password,
+        cellgroup_id,
+        cell_group_name,
+      });
+      console.log("newuser -> ", result);
       const user_id = result.insertedId; //result.insertedId property contains the _id value of the newly inserted document, so we can access it later to push into cellgroup
 
       //add user_id to cellgroup
-      //need to add cellgroup name in user login form, so findandupdate will find the correct cellgroup then update
+      //cellgroup name is in user login form, so findOneAndUpdate will find the correct cellgroup and update
       const cellGroup = await db
         .collection(dbCollections.cellGroup)
         .findOneAndUpdate(
@@ -116,7 +140,7 @@ async function main() {
           { returnOriginal: false }
         );
 
-      res.json({ message: "User created successfully" });
+      res.json({ message: "User created successfully", response: result });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Server error" });
@@ -266,15 +290,6 @@ async function main() {
 
     // Validate user email
     if (req.body.user.user_email) {
-      // check if email is in correct format
-
-      // const emailRegex =
-      //   /^([A-Za-z0-9_\-\.]){1,}\@([A-Za-z0-9_\-\.]){1,}\.([A-Za-z]){2,4}$/;
-      // if (!req.body.user_email.match(emailRegex)) {
-      //   res.status(400);
-      //   res.send({ error: "Invalid email format" });
-      //   return;
-      // }
       // check if email exist in database
       const emailExists = await db
         .collection(dbCollections.user)
