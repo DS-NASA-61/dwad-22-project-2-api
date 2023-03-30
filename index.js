@@ -56,7 +56,7 @@ async function main() {
     res.status(500); // Internal server error
     res.json({
       status: "error",
-      message: "Database not available, please try later.",
+      error: "Database not available, please try later.",
     });
   }
 
@@ -98,7 +98,7 @@ async function main() {
         .collection(dbCollections.user)
         .findOne({ username: username });
       if (existingUserName) {
-        return res.status(409).json({ message: "Username already exists" });
+        return res.status(409).json({ error: "Username already exists" });
       }
 
       //checking if user email already exist
@@ -106,7 +106,7 @@ async function main() {
         .collection(dbCollections.user)
         .findOne({ user_email: user_email });
       if (existingUserEmail) {
-        return res.status(409).json({ message: "User Email already exists" });
+        return res.status(409).json({ error: "User Email already exists" });
       }
 
       // find cell_group_id
@@ -150,7 +150,7 @@ async function main() {
       });
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: "Server error" });
+      res.status(500).json({ error: "Server error" });
     }
   });
 
@@ -158,7 +158,7 @@ async function main() {
   app.post("/login", async function (req, res) {
     try {
       const { username, user_email, password } = req.body;
-      console.log(req.body);
+      console.log("req.body-->", req.body);
       const user = await db.collection("user").findOne(
         {
           username: username,
@@ -192,11 +192,11 @@ async function main() {
         // res.status(200).send(`Welcome ${user.username}!`);
         res.json(response);
       } else {
-        res.status(401).send("Invalid username or user email");
+        res.status(401).json({ error: "Invalid username or user email" });
       }
     } catch (error) {
       console.error(error);
-      res.status(500).json({ message: "Server error" });
+      res.status(500).json({ error: "Server error" });
     }
   });
 
@@ -238,13 +238,13 @@ async function main() {
       };
     }
     if (req.query.prayer_topic) {
-      filter.prayer_topic = { $in: [req.query.prayer_topic] };
+      filter.prayer_topic = { $in: req.query.prayer_topic };
       // $in is mongoDB syntax to find somthing in and array
       // can also write as filter["prayer_topic"] = { $in: [req.query.prayer_topic] };
     }
 
     if (req.query.pray_for) {
-      filter.pray_for = { $in: [req.query.pray_for] };
+      filter.pray_for = { $in: req.query.pray_for };
     }
 
     // to enable serach by date
@@ -253,19 +253,14 @@ async function main() {
     }
 
     // to enable serach by user name, I choose not to use exact match $eq
-    if (req.query.username) {
-      filter.user.username = {
-        $regex: req.query.username,
-        $options: "i",
+    if (req.query.user) {
+      filter.user = {
+        username: {
+          $regex: req.query.user.username,
+          $options: "i",
+        },
       };
     }
-
-    //change database to add in cellgroup Id in prayerqRequest.User
-
-    // if (req.query.cellgroupId) {
-    //   filter.cell_group_id= {$eq:req.query.cellgroupId}
-    //   }
-    // }
 
     const requests = await db
       .collection("prayerRequest")
@@ -278,40 +273,40 @@ async function main() {
 
   // POST Endpoint to create new prayer request, data will be in req.body
   app.post("/prayer_request", async function (req, res) {
-    // Validate username
-    if (req.body.user.username) {
-      // validate if user name exist in the user name database
-      const usernameExists = await db
-        .collection(dbCollections.user)
-        .findOne({ username: req.body.user.username });
-      if (!usernameExists) {
-        res.status(400);
-        res.send({ error: "Username does not exist" });
-        return;
-      }
-    } else {
-      res.status(400);
-      res.send({ error: "Please input username" });
-      return;
-    }
+    // // Validate username
+    // if (req.body.user.username) {
+    //   // validate if user name exist in the user name database
+    //   const usernameExists = await db
+    //     .collection(dbCollections.user)
+    //     .findOne({ username: req.body.user.username });
+    //   if (!usernameExists) {
+    //     res.status(400);
+    //     res.send({ error: "Username does not exist" });
+    //     return;
+    //   }
+    // } else {
+    //   res.status(400);
+    //   res.send({ error: "Please input username" });
+    //   return;
+    // }
 
-    // Validate user email
-    if (req.body.user.user_email) {
-      // check if email exist in database
-      const emailExists = await db
-        .collection(dbCollections.user)
-        .findOne({ user_email: req.body.user.user_email }); //emailExists returns a object if can find
+    // // Validate user email
+    // if (req.body.user.user_email) {
+    //   // check if email exist in database
+    //   const emailExists = await db
+    //     .collection(dbCollections.user)
+    //     .findOne({ user_email: req.body.user.user_email }); //emailExists returns a object if can find
 
-      if (!emailExists) {
-        res.status(400);
-        res.send({ error: "User Email does not exist" });
-        return;
-      } else {
-        res.status(400);
-        res.send({ error: "Please input username" });
-        return;
-      }
-    }
+    //   if (!emailExists) {
+    //     res.status(400);
+    //     res.send({ error: "User Email does not exist" });
+    //     return;
+    //   } else {
+    //     res.status(400);
+    //     res.send({ error: "Please input username" });
+    //     return;
+    //   }
+    // }
 
     // Validate the rest of the input
     if (!req.body.title) {
@@ -347,9 +342,11 @@ async function main() {
         content: req.body.content,
         answered: req.body.answered,
         response: req.body.response,
+        // user: req.body.user,
         user: {
           username: req.body.user.username,
           user_email: req.body.user.user_email,
+          cellgroupId: new ObjectId(req.body.user.cellgroup_id),
         },
         title: req.body.title,
       });
@@ -391,6 +388,7 @@ async function main() {
           user: {
             username: req.body.user.username,
             user_email: req.body.user.user_email,
+            cellgroupId: new ObjectId(req.body.user.cellgroup_id),
           },
           title: req.body.title,
         },
@@ -424,7 +422,7 @@ async function main() {
         // const decodedToken = jwt.verify(token, process.env.JWT_SECRET);
         // const userId = decodedToken.userId;
 
-        // below is redundent, keep it to remember no need to do this next time!
+        // below is redundent, keep it to remember not to do it next time!
         // validation: make sure that post exists!
         // const prayerRequest = await db
         //   .collection("prayerRequest")
@@ -440,8 +438,10 @@ async function main() {
         const newResponse = {
           response_id: new ObjectId(),
           content: req.body.content,
-          // user_id: userId, //will be retrived from const userId = decodedToken.userId;
+          user_id: new ObjectId(req.body.user_id),
+          username: req.body.username,
         };
+        console.log(newResponse);
         const result = await db
           .collection("prayerRequest")
           .updateOne(
@@ -470,9 +470,6 @@ async function main() {
         const prayerRequestId = req.params.prayer_request_id;
         const responseId = req.params.response_id;
         const newContent = req.body.content;
-        console.log(prayerRequestId);
-        console.log(responseId);
-        console.log(newContent);
 
         //find the id of the prayer_request
         const prayerRequest = await db
