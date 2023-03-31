@@ -203,7 +203,7 @@ async function main() {
   // GET Endpoint to view all the users,
   app.get("/users", async function (req, res) {});
 
-  // GET route to search for users by name and cell group name (needed?)
+  // GET route to search for users by name
 
   // PUT Endpoint to edit the users,
 
@@ -253,14 +253,14 @@ async function main() {
     }
 
     // to enable serach by user name, I choose not to use exact match $eq
-    if (req.query.user) {
-      filter.user = {
-        username: {
-          $regex: req.query.user.username,
-          $options: "i",
-        },
-      };
-    }
+    // if (req.query.user) {
+    //   filter.user = {
+    //     username: {
+    //       $regex: req.query.user.username,
+    //       $options: "i",
+    //     },
+    //   };
+    // }
 
     const requests = await db
       .collection("prayerRequest")
@@ -497,6 +497,39 @@ async function main() {
   );
 
   // Delete Endpoint to delete the response,
+
+  // --- Routes: Answered ---
+  // PUT Endpoint to update answered from default `false` to `true`
+  app.put(
+    "/prayer_request/:prayer_request_id/answered",
+    async function (req, res) {
+      try {
+        // get the ID of the response I want to change, which is in the parameter
+        const prayerRequestId = req.params.prayer_request_id;
+
+        //find the id of the prayer_request
+        const prayerRequest = await db
+          .collection("prayerRequest")
+          .findOne({ _id: new ObjectId(prayerRequestId) });
+
+        if (!prayerRequest) {
+          return res.status(404).json({ error: "Prayer Request not found" });
+        }
+
+        // find the prayer request document and the response and update it
+        const result = await db.collection("prayerRequest").updateOne(
+          {
+            _id: new ObjectId(prayerRequestId),
+          },
+          { $set: { answered: true } }
+        );
+        res.json({ result: result });
+      } catch (error) {
+        res.status(404);
+        res.send({ error: "Prayer Request ID does not exist" });
+      }
+    }
+  );
 
   // --- Routes: Cellgroups ---
   // POST Endpoint to create new cellgroup, (for future development)
