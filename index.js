@@ -253,14 +253,15 @@ async function main() {
     }
 
     // to enable serach by user name, I choose not to use exact match $eq
-    // if (req.query.user) {
-    //   filter.user = {
-    //     username: {
-    //       $regex: req.query.user.username,
-    //       $options: "i",
-    //     },
-    //   };
-    // }
+    console.log(req.query);
+    if (req.query.user?.username) {
+      filter.user = {
+        username: {
+          $regex: req.query.user.username,
+          $options: "i",
+        },
+      };
+    }
 
     const requests = await db
       .collection("prayerRequest")
@@ -273,41 +274,6 @@ async function main() {
 
   // POST Endpoint to create new prayer request, data will be in req.body
   app.post("/prayer_request", async function (req, res) {
-    // // Validate username
-    // if (req.body.user.username) {
-    //   // validate if user name exist in the user name database
-    //   const usernameExists = await db
-    //     .collection(dbCollections.user)
-    //     .findOne({ username: req.body.user.username });
-    //   if (!usernameExists) {
-    //     res.status(400);
-    //     res.send({ error: "Username does not exist" });
-    //     return;
-    //   }
-    // } else {
-    //   res.status(400);
-    //   res.send({ error: "Please input username" });
-    //   return;
-    // }
-
-    // // Validate user email
-    // if (req.body.user.user_email) {
-    //   // check if email exist in database
-    //   const emailExists = await db
-    //     .collection(dbCollections.user)
-    //     .findOne({ user_email: req.body.user.user_email }); //emailExists returns a object if can find
-
-    //   if (!emailExists) {
-    //     res.status(400);
-    //     res.send({ error: "User Email does not exist" });
-    //     return;
-    //   } else {
-    //     res.status(400);
-    //     res.send({ error: "Please input username" });
-    //     return;
-    //   }
-    // }
-
     // Validate the rest of the input
     if (!req.body.title) {
       res.status(400);
@@ -350,6 +316,7 @@ async function main() {
         },
         title: req.body.title,
       });
+      console.log("new prayer request -->", result);
 
       // find the coresponding user docunment and update to include the newly created prayerRequest ID
       const user = await db.collection("user").findOneAndUpdate(
@@ -361,7 +328,13 @@ async function main() {
         { returnOriginal: false } //make sure to return the updated user collection
       );
 
-      res.json({ result: result }); //send back the result so client knows if it is successful
+      // get the new request
+      // using insertedid (result.insertedid)
+      const newPrayerRequest = await db
+        .collection("prayerRequest")
+        .findOne({ _id: result.insertedId });
+
+      res.json({ result: newPrayerRequest }); //send back the result so client knows if it is successful
     } catch (e) {
       sendDatabaseError(res);
     }
@@ -442,18 +415,23 @@ async function main() {
           username: req.body.username,
         };
         console.log(newResponse);
-        const result = await db
-          .collection("prayerRequest")
-          .updateOne(
-            { _id: new ObjectId(req.params.prayer_request_id) },
-            { $push: { response: newResponse } }
-          );
+        const result = await db.collection("prayerRequest").findOneAndUpdate(
+          { _id: new ObjectId(req.params.prayer_request_id) },
+          { $push: { response: newResponse } },
+          {
+            returnDocument: "after",
+          }
+        );
 
-        if (result.modifiedCount !== 1) {
-          throw new Error("Failed to add comment to post");
-        }
+        console.log("result", result);
 
-        res.json({ result: result });
+        // if (result.modifiedCount !== 1) {
+        //   throw new Error("Failed to add comment to post");
+        // }
+
+        res.json({ result: result.value.response });
+        console.log("new response", result.value.response);
+        console.log("new response", req.params.prayer_request_id);
       } catch (error) {
         res.status(404);
         res.send({ error: "Prayer Request ID does not exist" });
