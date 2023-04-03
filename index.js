@@ -65,33 +65,24 @@ async function main() {
   // --- Routes: Users ---
   // POST Endpoint to create new users aka sign up,
   app.post("/signup", async function (req, res) {
-    // Regex for username validation (between 5 to 15 chars, should only contain alphanumeric characters and/or underscores (_))
-    const usernameRegex = "^[A-Za-z]\\w{4,14}$";
+    // Regex for username validation (between 5 to 15 chars)
+    const usernameRegex = /^[a-zA-Z]{4,14}$/;
 
     // Regex for email validation
-    const emailRegex = "^S+@S+.S+$";
+    const emailRegex = /^(.+)@(.+)$/;
 
     // Regex for password validation (at least 8 characters with both letters and numbers)
-    const passwordRegex = "^(?=.*[A-Za-z])(?=.*d)[A-Za-zd]{8,}$";
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*d)[A-Za-zd]{8,}$/;
 
     try {
       const { username, user_email, password, cell_group_name } = req.body; // using destructuring assignment to extract these properties from the req.body object
 
-      // if (!usernameRegex.match(username)) {
-      //   return res.status(400).json({
-      //     error:
-      //       "username must be between 5 to 15 chars, should only contain alphanumeric characters and/or underscores",
-      //   });
-      // }
-      // if (!emailRegex.match(user_email)) {
-      //   return res.status(400).json({ error: "Invalid email format" });
-      // }
-      // if (!passwordRegex.match(password)) {
-      //   return res.status(400).json({
-      //     error:
-      //       "Please input least 8 characters with both letters and numbers",
-      //   });
-      // }
+      if (!usernameRegex.test(username)) {
+        return res.status(400).json({
+          error:
+            "username must be between 5 to 15 chars, should only contain alphanumeric characters and/or underscores",
+        });
+      }
 
       //checking if username already exist
       const existingUserName = await db
@@ -99,6 +90,10 @@ async function main() {
         .findOne({ username: username });
       if (existingUserName) {
         return res.status(409).json({ error: "Username already exists" });
+      }
+
+      if (!emailRegex.test(user_email)) {
+        return res.status(400).json({ error: "Invalid email format" });
       }
 
       //checking if user email already exist
@@ -110,14 +105,26 @@ async function main() {
       }
 
       // find cell_group_id
+      if (!cell_group_name) {
+        return res.status(409).json({ error: "Please select a cell group" });
+      }
+
       const cellgroup_id_object = await db
         .collection(dbCollections.cellGroup)
         .findOne(
           { cell_group_name: cell_group_name },
           { projection: { _id: 1 } }
         );
+
       const cellgroup_id = new ObjectId(cellgroup_id_object._id.toString());
       console.log("usercell_group_id -> ", cellgroup_id);
+
+      if (!passwordRegex.test(password)) {
+        return res.status(400).json({
+          error:
+            "Please input least 8 characters with both letters and numbers",
+        });
+      }
 
       // Connect to MongoDB and insert new user
       const result = await db.collection(dbCollections.user).insertOne({
@@ -218,6 +225,7 @@ async function main() {
   //GET Endpoint to retrive all existing prayer request, data will be in req.query
   app.get("/prayer_request", async function (req, res) {
     console.log("prayer request get route called");
+
     //the query string is the parameter passed to the end point, it's not part of the end point URL
     //three ways for and end points to receive info:
     //  1. req.body(send via .POST .PATCH .PUT, or when submit form, );
@@ -249,19 +257,41 @@ async function main() {
 
     // to enable serach by date
     if (req.query.date) {
-      filter.date = { $eq: req.query.date };
+      filter.date = {
+        $gt: new Date(req.query.date),
+        // $lt: new Date(req.query.date),
+      };
     }
 
     // to enable serach by user name, I choose not to use exact match $eq
-    console.log(req.query);
+
     if (req.query.user?.username) {
-      filter.user = {
-        username: {
-          $regex: req.query.user.username,
-          $options: "i",
-        },
+      filter["user.username"] = {
+        $regex: new RegExp(req.query.user.username, "i"),
       };
     }
+    console.log("🚀 ~ file: index.js:277 ~ filter:", filter);
+    console.log("🚀 username:", req.query.user?.username);
+
+    // const requests = await db.collection("prayerRequest").find().toArray();
+    // console.log("🚀 ~ file: index.js:282 ~ requests:", requests);
+    // let arr = [];
+
+    // for (let i = 0; i < requests.length; i++) {
+    //   console.log(
+    //     "🚀 ~ file: index.js:283 ~  requests[i].user.username:",
+    //     requests[i].user.username
+    //   );
+    //   const regex2 = "/" + req.query + "/";
+    //   const regex = `/${req.query}/`;
+    //   if (
+    //     requests[i].user.username !== null &&
+    //     requests[i].user.username.match(regex)
+    //   ) {
+    //     arr.push(requests[i]);
+    //   }
+    // }
+    // console.log("🚀 ~ file: index.js:280 ~ arr:", arr);
 
     const requests = await db
       .collection("prayerRequest")
@@ -419,7 +449,7 @@ async function main() {
           { _id: new ObjectId(req.params.prayer_request_id) },
           { $push: { response: newResponse } },
           {
-            returnDocument: "after",
+            returnDocument: "after", // Returns the original document by default. Returns the updated document if returnNewDocument is set to true or returnDocument is set to after.
           }
         );
 
@@ -528,6 +558,7 @@ async function main() {
   // PUT Endpoint to edit the cellgroups,(for future development)
   // DELETE to remove cellgroup,(for future development)
 }
+
 main();
 
 app.listen(PORT, function () {
