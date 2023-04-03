@@ -405,6 +405,7 @@ async function main() {
     const result = await db.collection("prayerRequest").deleteOne({
       _id: new ObjectId(req.params.prayer_request_id),
     });
+    console.log(result);
     res.json({
       status: "Prayer Request deleted.",
     });
@@ -505,6 +506,32 @@ async function main() {
   );
 
   // Delete Endpoint to delete the response,
+  //https://tusharf5.com/posts/mongodb-update-and-query-operators-for-arrays/
+  //https://stackoverflow.com/questions/15121758/using-mongodb-pull-to-delete-documents-within-an-array
+  app.delete(
+    "/prayer_request/:prayer_request_id/responses/:response_id",
+    async function (req, res) {
+      const prayerRequestId = req.params.prayer_request_id;
+      const responseId = req.params.response_id;
+
+      try {
+        const result = await db.collection("prayerRequest").updateOne(
+          {
+            _id: new ObjectId(prayerRequestId),
+            "response.response_id": new ObjectId(responseId),
+          },
+          { $pull: { response: { response_id: new ObjectId(responseId) } } }
+        );
+
+        res.status(200).json({ result: result });
+      } catch (error) {
+        res.status(400).json({ message: "error" });
+        console.log(prayerRequestId);
+        console.log(responseId);
+        // console.log(result.value);
+      }
+    }
+  );
 
   // --- Routes: Answered ---
   // PUT Endpoint to update answered from default `false` to `true`
