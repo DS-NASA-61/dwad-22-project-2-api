@@ -521,13 +521,17 @@ async function main() {
             "response.response_id": new ObjectId(responseId),
           },
           { $pull: { response: { response_id: new ObjectId(responseId) } } }
+          // { $pull: { "response. response_id": new ObjectId(responseId) } }
         );
 
         res.status(200).json({ result: result });
       } catch (error) {
         res.status(400).json({ message: "error" });
-        console.log(prayerRequestId);
-        console.log(responseId);
+        console.log(
+          "prayerRequestId for deleting response-->",
+          prayerRequestId
+        );
+        console.log("responseId for deleting response-->", responseId);
         // console.log(result.value);
       }
     }
