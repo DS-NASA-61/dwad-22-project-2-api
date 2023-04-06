@@ -2,7 +2,6 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
 const MongoUtil = require("./MongoUtil");
-const PORT = 4000;
 
 const cors = require("cors");
 
@@ -592,6 +591,6 @@ async function main() {
 
 main();
 
-app.listen(PORT, function () {
+app.listen(process.env.PORT || 3000, function () {
   console.log("Server has started");
 });
