@@ -593,4 +593,5 @@ main();
 
 app.listen(process.env.PORT || 3000, function () {
   console.log("Server has started");
+  console.log(process.env.PORT || 3000);
 });
